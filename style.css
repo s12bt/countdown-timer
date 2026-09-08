@@ -1,0 +1,435 @@
+/* テーマは html の data-theme で決まる。head のスクリプトが描画前に light / dark を書き込む */
+:root,
+:root[data-theme="light"] {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --border: #dfe4ee;
+  --text: #131a2b;
+  --text-dim: #6b7690;
+  --accent: #2f5fe0;
+  --accent-strong: #1f4bc4;
+  --danger: #d13b3b;
+  --track: #e5e9f2;
+  --accent-soft: rgba(47, 95, 224, 0.14);
+  --danger-soft: rgba(209, 59, 59, 0.1);
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e1320;
+  --surface: #161d2e;
+  --border: #26304a;
+  --text: #e8ecf5;
+  --text-dim: #8b96ae;
+  --accent: #5b8cff;
+  --accent-strong: #7aa2ff;
+  --danger: #ff6b6b;
+  --track: #232c44;
+  --accent-soft: rgba(91, 140, 255, 0.22);
+  --danger-soft: rgba(255, 107, 107, 0.16);
+}
+
+:root {
+  --radius: 12px;
+  /* 数字用。Mac は SF Pro Display の Bold、他 OS は各システムフォントの太字に落ちる */
+  --font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============ テーマ切り替え ============ */
+
+.theme-switch {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--track);
+  transition: opacity 0.4s ease;
+}
+
+/* カウント中に操作 UI が引っ込むときは、テーマ切り替えも一緒に消す */
+body:has(.run-screen.is-idle) .theme-switch {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.theme-switch__btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.theme-switch__btn:hover { color: var(--text); }
+
+.theme-switch__btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* 選択中の側につまみが乗る */
+.theme-switch__btn[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+
+.theme-switch__btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ============ 画面 1: 設定 ============ */
+
+.setup-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+}
+
+.title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.setup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+/* 大きな数字そのものが入力欄。時 / 分 / 秒 の 3 セグメントで 1 つの時刻を構成する */
+.time-input {
+  display: flex;
+  align-items: flex-start;
+  font-family: var(--font-display);
+  font-size: clamp(52px, 12vw, 96px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.seg-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.seg {
+  width: calc(2ch + 24px);
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: inherit;
+  letter-spacing: inherit;
+  text-align: center;
+  caret-color: var(--accent);
+  cursor: text;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.seg::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+.seg:hover { box-shadow: inset 0 0 0 2px var(--border); }
+
+.seg:focus {
+  outline: none;
+  background: var(--accent-soft);
+  box-shadow: none;
+}
+
+.seg-label {
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.colon {
+  /* input の行高はフォント由来の normal に固定されるため、コロン側も揃えて同じ高さにする */
+  padding: 6px 2px;
+  line-height: normal;
+  color: var(--text-dim);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.chip {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.reset-btn {
+  margin-left: 10px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.reset-btn:hover {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.reset-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chip:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* ============ 画面 2: カウントダウン ============ */
+
+.run-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-size: 100px; /* JS が transform: scale() で画面いっぱいに拡大する基準値 */
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  white-space: nowrap;
+  transform-origin: center center;
+  will-change: transform;
+  transition: filter 0.25s ease, opacity 0.25s ease;
+}
+
+/* 一時停止中: 数字をぼかして、中央の再生アイコンに視線を渡す */
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.run-screen.is-paused .pause-overlay { display: grid; }
+
+.pause-overlay svg {
+  width: clamp(96px, 17vw, 260px);
+  height: auto;
+  transition: transform 0.2s ease;
+}
+
+.pause-overlay:hover svg { transform: scale(1.06); }
+
+.pause-overlay__disc {
+  fill: var(--text);
+  opacity: 0.1;
+}
+
+/* fill と同色の stroke を linejoin: round で重ね、角の丸い三角形にする */
+.pause-overlay__play {
+  fill: var(--text);
+  stroke: var(--text);
+  stroke-width: 12;
+  stroke-linejoin: round;
+  opacity: 0.88;
+}
+
+.pause-overlay:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -4px;
+}
+
+.run-ui {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  transition: opacity 0.4s ease;
+}
+
+.run-status {
+  margin: 0;
+  min-height: 1em; /* 文言が空でも UI の位置が跳ねないように高さを保つ */
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+
+.run-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.run-screen { cursor: pointer; }
+.run-screen.is-finished { cursor: default; }
+
+/* 操作から一定時間が経ったら数字だけを残す */
+.run-screen.is-idle { cursor: none; }
+.run-screen.is-idle .run-ui { opacity: 0; pointer-events: none; }
+
+.run-screen.is-paused .display {
+  filter: blur(1.6px);
+  opacity: 0.5;
+}
+
+.run-screen.is-finished .display { color: var(--danger); }
+.run-screen.is-finished .run-status { color: var(--danger); }
+.run-screen.is-finished .bar__fill { background: var(--danger); }
+
+.bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--track);
+}
+
+.bar__fill {
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+
+/* ============ 共通パーツ ============ */
+
+.btn {
+  min-width: 140px;
+  padding: 12px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn:hover { border-color: var(--accent); }
+
+.btn--large {
+  min-width: 240px;
+  padding: 20px 48px;
+  border-radius: 16px;
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn--primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+
+.btn--ghost {
+  min-width: 120px;
+  padding: 9px 18px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+.btn--ghost:hover { color: var(--text); }
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.notify {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 11px;
+}
