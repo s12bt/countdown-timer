@@ -185,9 +185,8 @@ body:has(.run-screen.is-idle) .theme-switch {
 }
 
 .colon {
-  /* input の行高はフォント由来の normal に固定されるため、コロン側も揃えて同じ高さにする */
   padding: 6px 2px;
-  line-height: normal;
+  line-height: 1;
   color: var(--text-dim);
 }
 
